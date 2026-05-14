@@ -1,0 +1,17 @@
+name: anxiety-eeg
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python>=3.10
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - openpyxl
+  - pip
+  - pip:
+      - torch
+      - mne
+      - mne-bids

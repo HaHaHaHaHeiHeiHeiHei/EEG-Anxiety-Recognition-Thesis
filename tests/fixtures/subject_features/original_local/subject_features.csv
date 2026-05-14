@@ -1,0 +1,9 @@
+dataset,score_name,subject,split,context,anxiety,n_channels,source_count,global_rel_delta,global_rel_theta,global_rel_alpha,global_rel_beta,global_rel_gamma,global_beta_alpha_ratio,global_theta_beta_ratio,global_beta_over_delta_theta,global_spectral_centroid,global_one_over_f_slope,frontal_rel_theta,frontal_rel_alpha,frontal_rel_beta
+original_local,tra_anx,sub01,fixture,synthetic,24,7,1,0.42,0.18,0.16,0.14,0.10,0.875,1.286,0.233,10.2,-0.44,0.19,0.17,0.13
+original_local,tra_anx,sub02,fixture,synthetic,28,7,1,0.40,0.19,0.15,0.15,0.11,1.000,1.267,0.254,10.8,-0.42,0.20,0.16,0.15
+original_local,tra_anx,sub03,fixture,synthetic,31,7,1,0.38,0.20,0.15,0.16,0.11,1.067,1.250,0.276,11.1,-0.40,0.21,0.16,0.16
+original_local,tra_anx,sub04,fixture,synthetic,34,7,1,0.37,0.20,0.14,0.18,0.11,1.286,1.111,0.316,11.9,-0.38,0.21,0.15,0.18
+original_local,tra_anx,sub05,fixture,synthetic,39,7,1,0.35,0.21,0.13,0.20,0.11,1.538,1.050,0.357,12.7,-0.35,0.22,0.14,0.20
+original_local,tra_anx,sub06,fixture,synthetic,43,7,1,0.34,0.21,0.12,0.22,0.11,1.833,0.955,0.400,13.5,-0.32,0.22,0.13,0.22
+original_local,tra_anx,sub07,fixture,synthetic,48,7,1,0.32,0.22,0.12,0.24,0.10,2.000,0.917,0.444,14.2,-0.30,0.23,0.12,0.24
+original_local,tra_anx,sub08,fixture,synthetic,52,7,1,0.30,0.23,0.11,0.26,0.10,2.364,0.885,0.491,15.0,-0.28,0.24,0.11,0.27

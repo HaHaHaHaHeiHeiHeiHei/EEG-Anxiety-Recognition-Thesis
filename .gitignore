@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environments
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Outputs and local data
+outputs/
+features/
+data/_cache/
+data/**/raw/
+data/**/*.fif
+data/**/*.set
+data/**/*.fdt
+data/**/*.edf
+data/**/*.bdf
+data/**/*.mat
+data/**/*.xlsx
+data/**/*.xls
+data/**/*.pt
+data/**/*.pth
+data/**/*.ckpt
+
+# IDE
+.idea/
+.vscode/
+.playwright-mcp/
+
+# OS
+Thumbs.db
+.DS_Store

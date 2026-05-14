@@ -1,0 +1,9 @@
+dataset,score_name,subject,split,context,anxiety,n_channels,source_count,global_rel_delta,global_rel_theta,global_rel_alpha,global_rel_beta,global_rel_gamma,global_beta_alpha_ratio,global_theta_beta_ratio,global_beta_over_delta_theta,global_spectral_centroid,global_one_over_f_slope,frontal_rel_theta,frontal_rel_alpha,frontal_rel_beta
+ds003478,STAI,sub101,fixture,synthetic,25,7,1,0.44,0.17,0.17,0.12,0.10,0.706,1.417,0.197,9.8,-0.47,0.18,0.18,0.12
+ds003478,STAI,sub102,fixture,synthetic,29,7,1,0.42,0.18,0.16,0.14,0.10,0.875,1.286,0.233,10.4,-0.45,0.19,0.17,0.14
+ds003478,STAI,sub103,fixture,synthetic,33,7,1,0.40,0.19,0.15,0.16,0.10,1.067,1.188,0.271,11.0,-0.42,0.20,0.16,0.16
+ds003478,STAI,sub104,fixture,synthetic,36,7,1,0.38,0.20,0.14,0.18,0.10,1.286,1.111,0.310,11.7,-0.39,0.21,0.15,0.18
+ds003478,STAI,sub105,fixture,synthetic,41,7,1,0.36,0.20,0.13,0.21,0.10,1.615,0.952,0.375,12.7,-0.36,0.21,0.14,0.21
+ds003478,STAI,sub106,fixture,synthetic,45,7,1,0.34,0.21,0.12,0.23,0.10,1.917,0.913,0.418,13.5,-0.33,0.22,0.13,0.23
+ds003478,STAI,sub107,fixture,synthetic,49,7,1,0.32,0.22,0.11,0.25,0.10,2.273,0.880,0.463,14.3,-0.30,0.23,0.12,0.25
+ds003478,STAI,sub108,fixture,synthetic,53,7,1,0.30,0.23,0.10,0.27,0.10,2.700,0.852,0.509,15.1,-0.27,0.24,0.11,0.28

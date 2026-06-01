@@ -27,6 +27,10 @@ python scripts/run_smoke.py --device cpu
 
 ## 3. 准备真实特征
 
+`EVA-MED` 下载入口：
+
+- [SciDB EVA-MED 数据页面](https://www.scidb.cn/detail?dataSetId=e15a1364db5f425889d6d631055c8420)
+
 ```text
 features/subject_features/original_local/subject_features.csv  # EVA-MED
 features/subject_features/ds003478/subject_features.csv

@@ -20,6 +20,9 @@ import _bootstrap  # noqa: F401
 
 
 def main() -> int:
+    print("EVA-MED 下载入口：")
+    print("  https://www.scidb.cn/detail?dataSetId=e15a1364db5f425889d6d631055c8420")
+    print()
     internal_feature_paths = [
         "features/subject_features/original_local/subject_features.csv  # EVA-MED",
         "features/subject_features/ds003478/subject_features.csv",
@@ -28,7 +31,7 @@ def main() -> int:
     print("内部训练/验证特征表目标路径：")
     for path in internal_feature_paths:
         print(f"  {path}")
-    print("\n说明：OpenNeuro 原始 EEG 到 subject_features.csv 的提取器未随当前仓库分发。")
+    print("\n说明：仓库保留公开数据特征入口；部分原始 EEG 重建步骤仍需按 docs/reproduction.md 准备本地 helper。")
     print("\nMendeley 外部验证特征提取命令：")
     print(
         "  python -m anxiety_eeg.external.extract_mendeley_subject_features "

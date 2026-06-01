@@ -7,7 +7,7 @@
 | 内部训练与验证 | `EVA-MED`、OpenNeuro `ds003478`、OpenNeuro `ds007609` |
 | 外部兼容性验证 | Mendeley Data DOI `10.17632/sbyj5f6c3k.1` |
 
-代码中的 `original_local` 标识对应本地授权数据集 `EVA-MED`。
+代码中的 `original_local` 标识对应数据集 [`EVA-MED`](https://www.scidb.cn/detail?dataSetId=e15a1364db5f425889d6d631055c8420)。该名称为兼容既有特征表和 checkpoint 元数据而保留。
 
 ## 无泄露规则
 

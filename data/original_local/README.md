@@ -1,8 +1,10 @@
-# original_local / EVA-MED 本地队列
+# original_local / EVA-MED
 
-用途：论文内部本地队列，标签为 `tra_anx`，用于主模型内部训练与验证。
+用途：论文内部训练与验证数据集，标签为 `tra_anx`。
 
-获取方式：该队列属于课题组/本地授权数据，当前仓库不提供公开下载链接，也不放置真实数据文件。需要复现时，请向数据负责人获取授权副本。
+下载入口：[EVA-MED: An Enhanced Valence-Arousal Multimodal Emotion Dataset for Emotion Recognition](https://www.scidb.cn/detail?dataSetId=e15a1364db5f425889d6d631055c8420)
+
+说明：下载和使用时请遵循 SciDB 数据页面列出的许可与引用要求。仓库中的 `original_local` 名称是为兼容既有特征表、checkpoint 元数据和训练脚本保留的稳定代码标识。
 
 期望结构示例：
 

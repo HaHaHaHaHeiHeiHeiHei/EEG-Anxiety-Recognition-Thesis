@@ -10,7 +10,7 @@
 - 模型：轻量 MLP、dataset adapter、dataset bias 和辅助约束
 - 基线：训练集内部交叉验证的 LogReg-L2、SVM 和树模型；显式可选 XGBoost
 
-代码目录名 `original_local` 对应本地授权数据集 `EVA-MED`。
+代码目录名 `original_local` 对应数据集 `EVA-MED`。
 
 ## Repository Layout
 
@@ -66,9 +66,10 @@ python -m anxiety_eeg.external.evaluate_external_mendeley --train-output-root ou
 
 - [OpenNeuro ds003478](https://openneuro.org/datasets/ds003478)
 - [OpenNeuro ds007609](https://openneuro.org/datasets/ds007609)
+- [EVA-MED](https://www.scidb.cn/detail?dataSetId=e15a1364db5f425889d6d631055c8420)
 - [Mendeley Data DOI 10.17632/sbyj5f6c3k.1](https://data.mendeley.com/datasets/sbyj5f6c3k/1)
 
-
+下载和使用 `EVA-MED` 时，请遵循 SciDB 数据页面列出的许可与引用要求。
 
 ## Interpretation Boundary
 

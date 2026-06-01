@@ -68,7 +68,7 @@ python -m anxiety_eeg.external.evaluate_external_mendeley --train-output-root ou
 - [OpenNeuro ds007609](https://openneuro.org/datasets/ds007609)
 - [Mendeley Data DOI 10.17632/sbyj5f6c3k.1](https://data.mendeley.com/datasets/sbyj5f6c3k/1)
 
-`EVA-MED` 为本地授权数据，不提供伪造下载链接。
+
 
 ## Interpretation Boundary
 

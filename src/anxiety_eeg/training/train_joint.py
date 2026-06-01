@@ -4,8 +4,9 @@
     训练论文主模型 JointConstraintNet，复现全局频谱组织 + dataset adapter +
     auxiliary constraints 的跨数据集 subject-level 焦虑识别实验。
 输入：
-    `--features-root` 指向包含 `original_local/ds003478/ds007609` 三个子目录的
-    受试者级特征根目录，每个子目录内必须有 `subject_features.csv`。
+    `--features-root` 指向包含 `original_local`（EVA-MED）、`ds003478`、
+    `ds007609` 三个子目录的受试者级特征根目录，每个子目录内必须有
+    `subject_features.csv`。
 输出：
     每个 seed 的 checkpoint、history、验证预测、按数据集指标和聚合 summary，
     默认写入 `outputs/joint_constraint`。
@@ -44,8 +45,10 @@ from torch.utils.data import DataLoader
 from anxiety_eeg.config import apply_json_config
 from anxiety_eeg.data.joint_dataset import (
     DEFAULT_FEATURES_ROOT,
-    dataset_csvs_from_root,
+    FINAL_EXTERNAL_VALIDATION_DATASET,
+    INTERNAL_DATASET_ALIASES,
     build_joint_datasets,
+    dataset_csvs_from_root,
     weighted_binary_counts,
 )
 from anxiety_eeg.models.joint_constraint import JointConstraintNet
@@ -58,7 +61,7 @@ DEFAULT_SEEDS = [42, 123, 224, 3407, 65422, 7, 21, 2024, 31415, 27182]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Joint constraint training over original_local, ds003478, and ds007609 subject-level EEG features."
+        description="Joint constraint training over EVA-MED (original_local), ds003478, and ds007609 subject-level EEG features."
     )
     parser.add_argument("--config", type=Path, default=None, help="JSON config file; keys match CLI argument names.")
     parser.add_argument("--features-root", type=Path, default=DEFAULT_FEATURES_ROOT)
@@ -1035,6 +1038,10 @@ def main() -> int:
     args.output_root.mkdir(parents=True, exist_ok=True)
     print(f"[Device] {device}")
     print(f"[Output] {args.output_root.resolve()}")
+    print(
+        f"[Protocol] internal_train_val={INTERNAL_DATASET_ALIASES} "
+        f"external_validation={FINAL_EXTERNAL_VALIDATION_DATASET!r}"
+    )
 
     summaries = []
     dataset_metrics_all = []

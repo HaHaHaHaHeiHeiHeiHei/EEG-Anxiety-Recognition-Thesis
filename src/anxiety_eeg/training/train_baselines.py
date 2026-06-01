@@ -13,9 +13,9 @@ Extra Trees、Gradient Boosting，以及显式指定时才运行的可选 XGBoos
 论文对应：第 5 章“主模型与传统基线比较”。
 注意事项：
 - 基线复用与主模型一致的 subject-level split、训练集阈值和 gray-zone 权重。
-- 默认基线使用固定超参数；不应在论文中写成 train-only CV，除非另行实现内层交叉验证。
-- `--models all` 只运行默认基线，不再默认触发 xgboost 依赖。
-- 如需运行 XGBoost，请先安装 xgboost，并显式传入 `--models xgboost`。
+- 默认基线使用训练受试者内部的 CV 选择超参数；验证受试者不参与标准化或调参。
+- `--models all` 只运行默认 train-only CV 基线，不再默认触发 xgboost 依赖。
+- XGBoost 在论文表 5.1 中为固定超参数扩展基线，需显式传入 `--models xgboost`。
 """
 
 from __future__ import annotations
@@ -48,11 +48,16 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
 )
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 from anxiety_eeg.config import apply_json_config
 from anxiety_eeg.data.joint_dataset import (
     DEFAULT_FEATURES_ROOT,
+    FINAL_EXTERNAL_VALIDATION_DATASET,
+    INTERNAL_DATASET_ALIASES,
     build_joint_datasets,
     dataset_csvs_from_root,
     weighted_binary_counts,
@@ -107,7 +112,7 @@ AVAILABLE_MODELS = DEFAULT_MODELS + OPTIONAL_MODELS
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Traditional fixed-parameter baselines aligned to the joint constraint model: "
+            "Traditional train-only-CV baselines aligned to the joint constraint model: "
             "same subject split, gray-zone labels/weights, 25 seeds, and input features. "
             "Use --models all for default dependency-light baselines; use --models xgboost "
             "only after installing xgboost."
@@ -122,6 +127,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gray-z", type=float, default=0.35)
     parser.add_argument("--gray-zone-weight", type=float, default=0.35)
     parser.add_argument("--include-exploratory-features", action="store_true")
+    parser.add_argument(
+        "--fixed-hyperparameters",
+        action="store_true",
+        help="Use the legacy fixed-parameter mode instead of the thesis train-only inner CV protocol.",
+    )
     parser.add_argument("--n-jobs", type=int, default=-1)
     return apply_json_config(parser.parse_args())
 
@@ -262,6 +272,47 @@ def dataset_to_arrays(dataset) -> dict[str, np.ndarray]:
 def effective_fit_weights(labels: np.ndarray, sample_weight: np.ndarray, pos_weight_scalar: float) -> np.ndarray:
     class_factor = np.where(labels.astype(np.int64) == 1, float(pos_weight_scalar), 1.0)
     return sample_weight.astype(np.float64) * class_factor
+
+
+def choose_cv(labels: np.ndarray, seed: int) -> StratifiedKFold:
+    class_counts = np.bincount(np.asarray(labels, dtype=np.int64), minlength=2)
+    min_class = int(np.min(class_counts[class_counts > 0])) if np.any(class_counts > 0) else 2
+    n_splits = max(2, min(3, min_class))
+    return StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=int(seed))
+
+
+def build_cv_estimator_and_grid(model_name: str, seed: int):
+    scaler = StandardScaler()
+    if model_name == "logreg_l2":
+        clf = LogisticRegression(
+            penalty="l2",
+            solver="liblinear",
+            max_iter=5000,
+            random_state=int(seed),
+        )
+        grid = {"clf__C": [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]}
+    elif model_name == "linear_svm":
+        clf = SVC(kernel="linear", probability=True, random_state=int(seed), cache_size=500)
+        grid = {"clf__C": [0.1, 0.3, 1.0, 3.0, 10.0]}
+    elif model_name == "rbf_svm":
+        clf = SVC(kernel="rbf", probability=True, random_state=int(seed), cache_size=500)
+        grid = {"clf__C": [0.3, 1.0, 3.0, 10.0], "clf__gamma": ["scale", 0.03, 0.1]}
+    elif model_name == "random_forest":
+        clf = RandomForestClassifier(n_estimators=250, random_state=int(seed), n_jobs=1)
+        grid = {"clf__min_samples_leaf": [1, 2, 4], "clf__max_features": ["sqrt", None]}
+    elif model_name == "extra_trees":
+        clf = ExtraTreesClassifier(n_estimators=250, random_state=int(seed), n_jobs=1)
+        grid = {"clf__min_samples_leaf": [1, 2, 4], "clf__max_features": ["sqrt", None]}
+    elif model_name == "gradient_boosting":
+        clf = GradientBoostingClassifier(random_state=int(seed))
+        grid = {
+            "clf__n_estimators": [120, 250],
+            "clf__learning_rate": [0.03, 0.06],
+            "clf__max_depth": [1, 2],
+        }
+    else:
+        raise ValueError(f"Model {model_name!r} does not use the thesis train-only CV grid.")
+    return Pipeline([("scaler", scaler), ("clf", clf)]), grid
 
 
 def build_estimator(model_name: str, seed: int, n_jobs: int):
@@ -408,8 +459,8 @@ def train_eval_model(
     val_arrays: dict[str, np.ndarray],
     pos_weight_scalar: float,
     n_jobs: int,
+    train_only_cv: bool,
 ) -> tuple[dict, list[dict], list[dict]]:
-    estimator = build_estimator(model_name=model_name, seed=seed, n_jobs=n_jobs)
     fit_weight = effective_fit_weights(
         labels=train_arrays["label"],
         sample_weight=train_arrays["sample_weight"],
@@ -417,7 +468,28 @@ def train_eval_model(
     )
 
     started = time.time()
-    estimator.fit(train_arrays["x"], train_arrays["label"], sample_weight=fit_weight)
+    tuning_rule = "fixed_hyperparameters"
+    best_params = {}
+    inner_cv_best_roc_auc = float("nan")
+    if train_only_cv and model_name != "xgboost":
+        estimator, param_grid = build_cv_estimator_and_grid(model_name=model_name, seed=seed)
+        grid = GridSearchCV(
+            estimator=estimator,
+            param_grid=param_grid,
+            scoring="roc_auc",
+            cv=choose_cv(train_arrays["label"], seed),
+            n_jobs=int(n_jobs),
+            refit=True,
+            error_score="raise",
+        )
+        grid.fit(train_arrays["x"], train_arrays["label"], clf__sample_weight=fit_weight)
+        estimator = grid.best_estimator_
+        tuning_rule = "train_only_inner_cv"
+        best_params = grid.best_params_
+        inner_cv_best_roc_auc = float(grid.best_score_)
+    else:
+        estimator = build_estimator(model_name=model_name, seed=seed, n_jobs=n_jobs)
+        estimator.fit(train_arrays["x"], train_arrays["label"], sample_weight=fit_weight)
     fit_seconds = time.time() - started
 
     scores = predict_scores(estimator, val_arrays["x"])
@@ -432,6 +504,9 @@ def train_eval_model(
         "train_subjects": int(len(train_arrays["label"])),
         "val_subjects": int(len(val_arrays["label"])),
         "pos_weight": float(pos_weight_scalar),
+        "tuning_rule": tuning_rule,
+        "best_params": json.dumps(best_params, sort_keys=True),
+        "inner_cv_best_roc_auc": inner_cv_best_roc_auc,
         "selection_score": float(joint_score),
         "best_selection_score": float(joint_score),
         "best_val_balanced_accuracy": metrics["balanced_accuracy"],
@@ -584,6 +659,7 @@ def run_one_seed(args: argparse.Namespace, seed: int, model_names: list[str]) ->
     val_arrays = dataset_to_arrays(val_ds)
     neg_weight, pos_weight_value = weighted_binary_counts(train_ds)
     pos_weight_scalar = float(neg_weight / max(pos_weight_value, 1e-6))
+    train_only_cv = not bool(args.fixed_hyperparameters)
 
     seed_dir = args.output_root / f"seed_{seed}"
     seed_dir.mkdir(parents=True, exist_ok=True)
@@ -594,7 +670,11 @@ def run_one_seed(args: argparse.Namespace, seed: int, model_names: list[str]) ->
             "features_root": str(Path(args.features_root)),
             "dataset_csvs": {name: str(path) for name, path in dataset_csvs.items()},
             "protocol": "matched_to_joint_constraint_model_baseline",
-            "baseline_hyperparameter_rule": "fixed_hyperparameters_no_inner_cv",
+            "baseline_hyperparameter_rule": (
+                "train_only_inner_cv_except_xgboost_fixed"
+                if train_only_cv
+                else "fixed_hyperparameters_legacy_mode"
+            ),
             "split_rule": "per_dataset_subject_level_split",
             "threshold_rule": "train_set_median_per_dataset",
             "gray_zone_rule": "median +/- gray_z * train_std with down-weighted samples",
@@ -625,6 +705,7 @@ def run_one_seed(args: argparse.Namespace, seed: int, model_names: list[str]) ->
             val_arrays=val_arrays,
             pos_weight_scalar=pos_weight_scalar,
             n_jobs=int(args.n_jobs),
+            train_only_cv=train_only_cv,
         )
         summaries.append(summary)
         by_dataset.extend(dataset_rows)
@@ -638,7 +719,8 @@ def run_one_seed(args: argparse.Namespace, seed: int, model_names: list[str]) ->
             f"joint={summary['selection_score']:.4f} "
             f"bal={finite(summary.get('balanced_accuracy')):.4f} "
             f"auc={finite(summary.get('roc_auc')):.4f} "
-            f"f1={finite(summary.get('f1')):.4f}"
+            f"f1={finite(summary.get('f1')):.4f} "
+            f"tuning={summary['tuning_rule']}"
         )
 
     return summaries, by_dataset, predictions
@@ -649,7 +731,12 @@ def main() -> int:
     args.output_root.mkdir(parents=True, exist_ok=True)
     model_names = normalize_model_list(args.models)
     print(f"[Output] {args.output_root.resolve()}")
+    print(
+        f"[Protocol] internal_train_val={INTERNAL_DATASET_ALIASES} "
+        f"external_validation={FINAL_EXTERNAL_VALIDATION_DATASET!r}"
+    )
     print(f"[Models] {model_names}")
+    print(f"[Tuning] {'legacy_fixed' if args.fixed_hyperparameters else 'train_only_inner_cv_except_xgboost_fixed'}")
     print(f"[Seeds] n={len(args.seeds)} values={[int(seed) for seed in args.seeds]}")
 
     all_summaries: list[dict] = []

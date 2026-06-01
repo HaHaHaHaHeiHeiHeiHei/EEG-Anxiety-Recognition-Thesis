@@ -1,54 +1,42 @@
-# 面向焦虑情绪诱发与识别的 EEG 复现实验代码
+# Anxiety EEG Thesis Reproduction
 
-本仓库用于实现“弱标签、跨受试者 EEG 焦虑识别”的主线实验。
+面向弱标签、跨受试者 EEG 焦虑识别的论文复现仓库。
 
-## 研究主线
+## Final Protocol
 
-论文开题阶段曾实现 EEG、ECG、PI 多模态同步分析，但实验增益不稳定，因此最终主体收敛为 EEG 单模态：
+- 内部训练与验证：`EVA-MED`、OpenNeuro `ds003478`、OpenNeuro `ds007609`
+- 外部兼容性验证：[Mendeley Data DOI 10.17632/sbyj5f6c3k.1](https://data.mendeley.com/datasets/sbyj5f6c3k/1)
+- 划分规则：subject-level split；阈值、gray-zone 和标准化统计量仅由训练受试者估计
+- 模型：轻量 MLP、dataset adapter、dataset bias 和辅助约束
+- 基线：训练集内部交叉验证的 LogReg-L2、SVM 和树模型；显式可选 XGBoost
 
-- 受试者级 EEG 全局频谱组织特征
-- 无泄露 subject-level train/validation split
-- 轻量 MLP + dataset adapter + auxiliary constraints
-- 固定超参数传统机器学习基线
-- 表征/结构消融
-- Mendeley 外部兼容性验证
-- ds007216 domain-shift / direction mismatch 审计
+代码目录名 `original_local` 对应本地授权数据集 `EVA-MED`。
 
-## 项目结构
+## Repository Layout
 
 ```text
 src/anxiety_eeg/       Python 包源码
 scripts/               常用命令入口
-configs/               JSON 实验配置
-data/                  只放数据集名称文件夹和下载/获取说明
-tests/fixtures/        合成 smoke 数据
-docs/                  复现说明和论文代码映射
-outputs/               默认输出目录，不提交 Git
+configs/               默认实验配置
+data/                  数据下载与授权说明，不包含真实数据
+tests/fixtures/        可提交的合成 smoke 数据
+docs/                  复现流程、代码映射和结果边界
+results/reference/     论文冻结表的轻量参考副本
+outputs/               本地生成结果，已被 Git 忽略
 ```
 
-## 安装
+## Quick Start
 
 ```powershell
 python -m pip install -e .
-python -m pip install -r requirements.txt
-```
-
-## 完整执行流程
-
-第一次检查或复现实验时，建议先阅读 [执行流程介绍.md](执行流程介绍.md)。该文档按顺序说明环境安装、smoke 验证、真实数据准备、特征提取、主模型训练、传统基线、消融实验、外部验证和输出检查。
-
-## 快速验证
-
-```powershell
 python scripts/run_smoke.py --device cpu
 ```
 
-该命令使用合成特征表，完成 1 seed、1 epoch 的主模型训练和 LogReg-L2 基线训练。它只验证代码可跑，不代表论文指标。
+smoke 使用合成特征表，执行 1 seed、1 epoch 的主模型训练和 LogReg-L2 基线训练。它只验证代码链路，不代表论文指标。
 
-## 真实复现
+## Full Reproduction
 
-1. 按 `data/<dataset>/README.md` 准备数据。
-2. 将受试者级特征表放到：
+将三套内部受试者级特征表放到：
 
 ```text
 features/subject_features/original_local/subject_features.csv
@@ -56,39 +44,36 @@ features/subject_features/ds003478/subject_features.csv
 features/subject_features/ds007609/subject_features.csv
 ```
 
-3. 训练主模型：
+运行主模型和 train-only CV 基线：
 
 ```powershell
 python scripts/train_joint.py --config configs/default_joint.json
-```
-
-4. 训练传统基线：
-
-```powershell
 python scripts/train_baselines.py --features-root features/subject_features --models all
 ```
 
-说明：`--models all` 只运行默认传统基线，包括 LogReg-L2、Linear SVM、RBF SVM、Random Forest、Extra Trees 和 Gradient Boosting。XGBoost 是可选扩展模型，默认不运行；如需运行，请先安装 `xgboost`，再显式执行 `--models xgboost`。
+Mendeley 外部兼容性验证：
 
-完整执行顺序见 `执行流程介绍.md`，精简复现命令见 `docs/reproduction.md`。
+```powershell
+python -m anxiety_eeg.external.extract_mendeley_subject_features --workbook data/mendeley_anxiety_control/EEG_data.xlsx
+python -m anxiety_eeg.external.evaluate_external_mendeley --train-output-root outputs/joint_constraint --skip-scoring
+```
 
-## 数据说明
+完整步骤见 [docs/reproduction.md](docs/reproduction.md)，论文冻结结果见 [docs/results.md](docs/results.md)。
 
-本仓库不放真实数据。公开数据入口：
+## Data Policy
+
+本仓库不提交真实 EEG、标签表、Excel 工作簿、模型 checkpoint 或完整运行输出。公开数据入口：
 
 - [OpenNeuro ds003478](https://openneuro.org/datasets/ds003478)
 - [OpenNeuro ds007609](https://openneuro.org/datasets/ds007609)
-- [OpenNeuro ds007216](https://openneuro.org/datasets/ds007216)
 - [Mendeley Data DOI 10.17632/sbyj5f6c3k.1](https://data.mendeley.com/datasets/sbyj5f6c3k/1)
 
-`original_local / EVA-MED` 为课题组/本地授权数据，不伪造公开下载链接。
+`EVA-MED` 为本地授权数据，不提供伪造下载链接。
 
-## 解释边界
+## Interpretation Boundary
 
-本研究不声称构建了高准确率临床诊断器。核心结论是：在严格 subject-level、弱标签、小样本和跨数据集域偏移条件下，EEG 全局频谱组织中存在弱但可检查的焦虑相关信号；模型提供的是有限稳定化，而非全面超越传统方法。
+本研究不声称构建了高准确率临床诊断器。核心结论是：在严格 subject-level、弱标签、小样本和跨数据集域偏移条件下，EEG 全局频谱组织中存在弱但可检查的焦虑相关信号；模型提供有限稳定化，而非全面超越传统方法。
 
-## 与论文表述的一致性说明
+## License
 
-- 主模型默认配置使用 25 个随机种子，与论文第 5 章的多 seed 报告一致。
-- 传统机器学习基线使用固定超参数，并复用与主模型一致的 subject-level split、训练集阈值和 gray-zone 标签规则。
-- 若论文中写到传统基线，建议表述为“固定超参数传统基线”或“与主模型协议一致的传统基线”，不要写成 “train-only CV”，除非后续另行加入内层交叉验证。
+当前仓库采用保守的 `All rights reserved` 声明。公开数据集仍遵循各自来源的许可与引用要求。

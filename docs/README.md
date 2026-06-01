@@ -1,10 +1,7 @@
 # docs
 
-本目录存放论文代码整理说明、复现流程和结果解释边界。
-
-- `code_map.md`：论文内容与代码入口的对应关系。
-- `reproduction.md`：从数据准备到主实验、基线、消融、外部验证的运行流程。
-- `legacy_preliminary.md`：多模态前期工程和旧路线说明。
-- `interpretation_notes.md`：结果解释边界，避免过度声称。
-
-根目录的 `执行流程介绍.md` 是更完整的中文执行手册，适合第一次检查项目是否能跑通时阅读。本目录文档作为论文映射、复现细节和解释边界的补充材料，不存放真实数据或实验输出。
+- `reproduction.md`：从环境安装到主实验、基线、消融和 Mendeley 外部验证。
+- `data_protocol.md`：终稿采用的数据协议与公开仓库边界。
+- `code_map.md`：论文内容与代码入口映射。
+- `results.md`：论文冻结结果和当前环境复跑说明。
+- `interpretation_notes.md`：结果解释边界。

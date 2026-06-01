@@ -4,10 +4,10 @@
     训练 shared_subspace 的 Logistic Regression 参考基线，用来判断跨数据集共有
     theta/alpha/beta 特征子空间中是否存在弱但可用的焦虑相关信号。
 输入：
-    `--features-root` 为内部三数据集特征目录；外部 CSV 可通过
-    `--mendeley-features` 和 `--ds007216-features` 指定。
+    `--features-root` 为内部三数据集特征目录；Mendeley 外部 CSV 可通过
+    `--mendeley-features` 指定。
 输出：
-    内部验证、Mendeley 兼容性验证和 ds007216 方向审计的 CSV summary。
+    内部验证和 Mendeley 兼容性验证的 CSV summary。
 快速运行：
     `python -m anxiety_eeg.analysis.run_shared_subspace_logistic --features-root features/subject_features --skip-external`
 论文对应：
@@ -35,8 +35,7 @@ from sklearn.metrics import (
 )
 
 
-CURRENT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = CURRENT_DIR.parent
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 from anxiety_eeg.config import apply_json_config
 from anxiety_eeg.data.joint_dataset import (  # noqa: E402
@@ -50,7 +49,6 @@ from anxiety_eeg.data.joint_dataset import (  # noqa: E402
 DEFAULT_SEEDS = [42, 123, 224, 3407, 65422, 7, 21, 2024, 31415, 27182]
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "shared_subspace_logistic"
 DEFAULT_MENDELEY_CSV = REPO_ROOT / "features" / "external" / "mendeley" / "subject_features.csv"
-DEFAULT_DS007216_CSV = REPO_ROOT / "features" / "external" / "ds007216" / "subject_features.csv"
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,7 +57,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--features-root", type=Path, default=DEFAULT_FEATURES_ROOT)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--mendeley-features", type=Path, default=DEFAULT_MENDELEY_CSV)
-    parser.add_argument("--ds007216-features", type=Path, default=DEFAULT_DS007216_CSV)
     parser.add_argument("--skip-external", action="store_true")
     parser.add_argument("--seeds", nargs="+", type=int, default=DEFAULT_SEEDS)
     parser.add_argument("--feature-preset", choices=["shared_common"], default="shared_common")
@@ -168,20 +165,6 @@ def build_external_matrix(rows: list, feature_names: list[str], means: dict[str,
     return np.asarray(matrix, dtype=np.float32)
 
 
-def compute_external_thresholds(rows: list, gray_z: float) -> dict[str, float]:
-    scores = np.asarray([float(row.anxiety) for row in rows], dtype=np.float32)
-    center = float(np.median(scores))
-    std = float(np.std(scores))
-    if not math.isfinite(std) or std < 1e-8:
-        std = 1.0
-    return {
-        "center": center,
-        "std": std,
-        "low_threshold": float(center - gray_z * std),
-        "high_threshold": float(center + gray_z * std),
-    }
-
-
 def aggregate_mean_std(rows: list[dict], metric_names: list[str]) -> list[dict]:
     out = []
     for metric in metric_names:
@@ -209,15 +192,11 @@ def main() -> int:
     internal_prediction_rows: list[dict] = []
     mendeley_summary_rows: list[dict] = []
     mendeley_prediction_rows: list[dict] = []
-    ds007216_summary_rows: list[dict] = []
-    ds007216_prediction_rows: list[dict] = []
 
     dataset_csvs = dataset_csvs_from_root(args.features_root)
     mendeley_rows = []
-    ds007216_rows = []
     if not args.skip_external:
         mendeley_rows = read_subject_feature_csv(args.mendeley_features, dataset_name="mendeley")
-        ds007216_rows = read_subject_feature_csv(args.ds007216_features, dataset_name="ds007216")
 
     for seed in args.seeds:
         train_ds, val_ds, split_info = build_joint_datasets(
@@ -293,46 +272,15 @@ def main() -> int:
                     }
                 )
 
-            thresholds = compute_external_thresholds(ds007216_rows, gray_z=args.gray_z)
-            x_ds007216 = build_external_matrix(ds007216_rows, feature_names, means, stds)
-            y_ds007216 = np.asarray([int(float(row.anxiety) >= thresholds["center"]) for row in ds007216_rows], dtype=np.int64)
-            gray_ds007216 = np.asarray(
-                [thresholds["low_threshold"] < float(row.anxiety) < thresholds["high_threshold"] for row in ds007216_rows],
-                dtype=bool,
-            )
-            prob_ds007216 = model.predict_proba(x_ds007216)[:, 1]
-            ds007216_metrics = binary_metrics(y_ds007216, prob_ds007216, in_gray_zone=gray_ds007216)
-            ds007216_metrics["flip_roc_auc"] = safe_roc_auc(y_ds007216, 1.0 - prob_ds007216)
-            ds007216_summary_rows.append(
-                {
-                    "seed": int(seed),
-                    "model_name": "shared_subspace_logreg",
-                    **ds007216_metrics,
-                }
-            )
-            for row, label, gray, prob in zip(ds007216_rows, y_ds007216, gray_ds007216, prob_ds007216):
-                ds007216_prediction_rows.append(
-                    {
-                        "seed": int(seed),
-                        "subject": row.subject,
-                        "anxiety": float(row.anxiety),
-                        "label": int(label),
-                        "in_gray_zone": bool(gray),
-                        "prob_high": float(prob),
-                    }
-                )
-
     write_csv(output_root / "internal_seed_results.csv", internal_rows)
     write_csv(output_root / "internal_predictions.csv", internal_prediction_rows)
     write_csv(output_root / "mendeley_seed_results.csv", mendeley_summary_rows)
     write_csv(output_root / "mendeley_predictions.csv", mendeley_prediction_rows)
-    write_csv(output_root / "ds007216_seed_results.csv", ds007216_summary_rows)
-    write_csv(output_root / "ds007216_predictions.csv", ds007216_prediction_rows)
 
     metric_names = ["joint_score", "accuracy", "balanced_accuracy", "f1", "roc_auc", "pr_auc", "extreme_balanced_accuracy", "extreme_roc_auc"]
     write_csv(output_root / "internal_aggregate.csv", aggregate_mean_std(internal_rows, metric_names))
-    write_csv(output_root / "mendeley_aggregate.csv", aggregate_mean_std(mendeley_summary_rows, ["accuracy", "balanced_accuracy", "f1", "roc_auc", "pr_auc"]))
-    write_csv(output_root / "ds007216_aggregate.csv", aggregate_mean_std(ds007216_summary_rows, ["accuracy", "balanced_accuracy", "f1", "roc_auc", "pr_auc", "flip_roc_auc"]))
+    if mendeley_summary_rows:
+        write_csv(output_root / "mendeley_aggregate.csv", aggregate_mean_std(mendeley_summary_rows, ["accuracy", "balanced_accuracy", "f1", "roc_auc", "pr_auc"]))
 
     write_json(
         output_root / "run_config.json",

@@ -5,7 +5,8 @@
     no_global_aux、no_frontal_aux、no_shared_constraints、no_gray_weighting、
     global_threshold。
 输入：
-    `--features-root` 指向真实受试者级特征目录；可选已训练 checkpoint 后再跑外部验证。
+    `--features-root` 指向真实受试者级特征目录；可选已训练 checkpoint 后再跑
+    Mendeley 外部验证。
 输出：
     每个消融实验的训练输出和可选外部验证结果，默认写入 `outputs/joint_ablation_suite`。
 快速运行：
@@ -144,7 +145,6 @@ def main() -> int:
         exp_dir = output_root / exp_name
         train_root = exp_dir / "train_outputs"
         mendeley_root = exp_dir / "external_mendeley"
-        ds007216_root = exp_dir / "external_ds007216"
         print(f"\n========== {exp_name} ==========")
         print(spec["description"])
 
@@ -181,20 +181,6 @@ def main() -> int:
             str(args.device),
         ]
         run_command(mendeley_cmd, cwd=REPO_ROOT)
-
-        ds007216_cmd = [
-            str(args.python),
-            "-m",
-            "anxiety_eeg.external.evaluate_external_ds007216",
-            "--train-output-root",
-            str(train_root),
-            "--results-dir",
-            str(ds007216_root),
-            "--skip-scoring",
-            "--device",
-            str(args.device),
-        ]
-        run_command(ds007216_cmd, cwd=REPO_ROOT)
 
     print(f"\nFinished. Outputs saved under: {output_root}")
     return 0

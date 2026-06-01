@@ -117,6 +117,19 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def resolve_feature_workbook(subject_features_path: Path, requested_workbook: Path) -> str:
+    dataset_info_path = subject_features_path.parent / "dataset_info.json"
+    if dataset_info_path.exists():
+        try:
+            dataset_info = json.loads(dataset_info_path.read_text(encoding="utf-8"))
+            extracted_workbook = dataset_info.get("config", {}).get("workbook")
+            if extracted_workbook:
+                return str(Path(extracted_workbook).resolve())
+        except (OSError, TypeError, json.JSONDecodeError):
+            pass
+    return str(requested_workbook.resolve())
+
+
 def finite_float(value: object) -> float:
     out = float(str(value).strip())
     if not math.isfinite(out):
@@ -638,13 +651,17 @@ def main() -> int:
 
     aggregate_rows, payload = aggregate_payload(summary_rows_all, list(args.strategies))
     runtime_sec = float(time.time() - started)
+    feature_workbook = resolve_feature_workbook(subject_features_path, args.workbook)
+    requested_workbook = str(args.workbook.resolve())
     payload["runtime_sec"] = runtime_sec
     payload["n_seeds"] = int(len(seed_dirs))
     payload["seed_values"] = [int(path.name.split("_", 1)[1]) for path in seed_dirs]
     payload["external_thresholds"] = thresholds
     payload["train_output_root"] = str(args.train_output_root.resolve())
     payload["scoring_dir"] = str(args.scoring_dir.resolve())
-    payload["workbook"] = str(args.workbook.resolve())
+    payload["workbook"] = feature_workbook
+    if feature_workbook != requested_workbook:
+        payload["workbook_requested"] = requested_workbook
     payload["condition"] = str(args.condition)
     payload["proxy_dataset"] = str(args.proxy_dataset)
     payload["overall_imputed_features"] = sorted(
@@ -668,7 +685,7 @@ def main() -> int:
             config={
                 "train_output_root": str(args.train_output_root),
                 "scoring_dir": str(args.scoring_dir),
-                "workbook": str(args.workbook),
+                "workbook": feature_workbook,
                 "condition": str(args.condition),
                 "proxy_dataset": str(args.proxy_dataset),
             },
@@ -677,6 +694,7 @@ def main() -> int:
 
     print(f"[Device] {device}")
     print(f"[Mendeley] subject_features={subject_features_path}")
+    print(f"[Mendeley] feature_workbook={feature_workbook}")
     print(f"[Mendeley] results_dir={args.results_dir.resolve()}")
     for strategy in args.strategies:
         metrics = payload["by_strategy"].get(strategy, {})

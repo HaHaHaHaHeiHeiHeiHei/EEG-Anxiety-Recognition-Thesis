@@ -2,7 +2,8 @@
 
 用途：
     构建论文主实验使用的受试者级 EEG 频谱特征数据集，支持三数据集
-    `original_local`、`ds003478`、`ds007609` 的无泄露 subject-level 划分。
+    `original_local`（EVA-MED）、`ds003478`、`ds007609` 的无泄露
+    subject-level 划分。
 输入：
     每个数据集一个 `subject_features.csv`，默认位置为
     `features/subject_features/<dataset>/subject_features.csv`；smoke 测试可使用
@@ -33,6 +34,12 @@ from torch.utils.data import Dataset
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_FEATURES_ROOT = REPO_ROOT / "features" / "subject_features"
 INTERNAL_DATASETS = ("original_local", "ds003478", "ds007609")
+INTERNAL_DATASET_ALIASES = {
+    "original_local": "EVA-MED",
+    "ds003478": "OpenNeuro ds003478",
+    "ds007609": "OpenNeuro ds007609",
+}
+FINAL_EXTERNAL_VALIDATION_DATASET = "Mendeley Data DOI 10.17632/sbyj5f6c3k.1"
 
 
 def dataset_csvs_from_root(
@@ -491,6 +498,11 @@ def build_joint_datasets(
         "threshold_mode": str(threshold_mode),
         "feature_preset": str(feature_preset),
         "dataset_order": dataset_names,
+        "dataset_aliases": {
+            dataset_name: INTERNAL_DATASET_ALIASES.get(dataset_name, dataset_name)
+            for dataset_name in dataset_names
+        },
+        "final_external_validation_dataset": FINAL_EXTERNAL_VALIDATION_DATASET,
         "input_features": input_features,
         "global_constraint_features": global_target_features,
         "region_constraint_features": region_target_features,

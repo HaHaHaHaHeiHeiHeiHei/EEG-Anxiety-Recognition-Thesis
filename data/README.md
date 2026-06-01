@@ -12,8 +12,8 @@ smoke 测试使用 `tests/fixtures/subject_features` 中的合成数据。
 
 ## 输入
 
-- 公开数据集：按 `ds003478/`、`ds007609/`、`ds007216/` 中的链接自行下载。
-- 本地队列：按 `original_local/` 的授权说明获取。
+- 内部公开数据集：按 `ds003478/`、`ds007609/` 中的链接自行下载。
+- 内部本地队列：按 `original_local/` 的授权说明获取；该目录对应 `EVA-MED`。
 - Mendeley：按 `mendeley_anxiety_control/` 的 DOI 链接下载工作簿。
 
 ## 输出

@@ -1,11 +1,11 @@
 """中文说明
 
 用途：
-    给出公开数据集特征提取入口的统一帮助信息。
+    给出论文最终数据协议所需特征表的统一准备清单。
 输入：
-    无；实际提取请运行对应 `python -m anxiety_eeg.features.score_*` 模块。
+    无；OpenNeuro 原始 EEG 到特征表的提取器未随当前仓库分发。
 输出：
-    控制台打印命令清单。
+    控制台打印内部特征表目标路径和可运行的 Mendeley 提取命令。
 快速运行：
     `python scripts/prepare_features.py`
 论文对应：
@@ -20,15 +20,20 @@ import _bootstrap  # noqa: F401
 
 
 def main() -> int:
-    commands = [
-        "python -m anxiety_eeg.features.score_ds003478 --ds-root data/ds003478 --output-dir features/subject_features/ds003478",
-        "python -m anxiety_eeg.features.score_ds007609 --output-dir features/subject_features/ds007609",
-        "python -m anxiety_eeg.features.score_ds007216 --output-dir features/external/ds007216",
-        "python -m anxiety_eeg.external.extract_mendeley_subject_features --workbook data/mendeley_anxiety_control/EEG_data.xlsx",
+    internal_feature_paths = [
+        "features/subject_features/original_local/subject_features.csv  # EVA-MED",
+        "features/subject_features/ds003478/subject_features.csv",
+        "features/subject_features/ds007609/subject_features.csv",
     ]
-    print("特征提取命令示例：")
-    for command in commands:
-        print(f"  {command}")
+    print("内部训练/验证特征表目标路径：")
+    for path in internal_feature_paths:
+        print(f"  {path}")
+    print("\n说明：OpenNeuro 原始 EEG 到 subject_features.csv 的提取器未随当前仓库分发。")
+    print("\nMendeley 外部验证特征提取命令：")
+    print(
+        "  python -m anxiety_eeg.external.extract_mendeley_subject_features "
+        "--workbook data/mendeley_anxiety_control/EEG_data.xlsx"
+    )
     return 0
 
 
